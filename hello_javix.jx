@@ -1,0 +1,97 @@
+// ============================================
+// Javix v0.1.0-alpha 全功能演示
+// ============================================
+
+// --- 递归函数 ---
+fn fibonacci(n: int) -> int {
+    if (n <= 1) return n;
+    return fibonacci(n - 1) + fibonacci(n - 2);
+}
+
+// --- 类 + 继承 ---
+class Animal {
+    String name;
+    fn speak() -> String { return "animal"; }
+}
+
+class Dog extends Animal {
+    String breed;
+    fn speak() -> String { return "Woof!"; }
+}
+
+// --- 枚举 ---
+enum Status { IDLE, RUNNING, DONE }
+
+// --- 主函数 ---
+fn testMain() -> int {
+    // 变量 + final
+    final int VERSION = 1;
+    print(VERSION);                          // 1
+
+    // for 循环: 1+2+3+4+5 = 15
+    int sum = 0;
+    for (int i = 1; i <= 5; i = i + 1) {
+        sum = sum + i;
+    }
+    print(sum);                              // 15
+
+    // while 循环
+    int w = 10;
+    while (w > 5) {
+        w = w - 1;
+    }
+    print(w);                                // 5
+
+    // do-while: 至少执行一次
+    int d = 0;
+    do { d = d + 100; } while (d < 50);
+    print(d);                                // 100
+
+    // switch
+    switch (sum) {
+        case 15: print(15); break;
+        default: print(0);  break;
+    }
+
+    // 递归
+    print(fibonacci(10));                    // 55
+
+    // 字符串操作
+    print(strlen("Hello"));                  // 5
+
+    // Character
+    boolean isDig = charIsDigit('7');
+    boolean isLet = charIsLetter('Z');
+    printBool(isDig);                        // true
+    printBool(isLet);                        // true
+
+    // HashMap
+    mapPut("language", "Javix");
+    mapPut("version", "v0.1.0-alpha");
+    print(mapGet("language"));               // Javix
+    print(mapContainsKey("version"));        // true
+
+    // ArrayList
+    int items = listCreate();
+    listAdd(items, "alpha");
+    listAdd(items, "beta");
+    listAdd(items, "gamma");
+    print(listSize(items));                  // 3
+    print(listGet(items, 1));                // beta
+
+    // 类 + 继承
+    Dog myDog = new Dog("Buddy", "Golden");
+    print(myDog.name);                       // Buddy
+    print(myDog.breed);                      // Golden
+    print(myDog.speak());                    // Woof! I'm Buddy
+
+    // 文件 IO
+    writeFile("hello_javix_output.txt", "Javix says hello!");
+    print(readFile("hello_javix_output.txt")); // Javix says hello!
+
+    // 线程
+    threadSleep(10);
+
+    return 0;
+}
+testMain();

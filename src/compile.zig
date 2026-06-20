@@ -187,53 +187,67 @@ pub fn build(io: std.Io, parent_allocator: std.mem.Allocator, source_path: []con
     const out_ext: []const u8 = if (wasm) ".wasm" else if (@import("builtin").os.tag == .windows) ".exe" else "";
     const out_path = try std.fmt.allocPrint(allocator, "{s}{s}", .{ stem, out_ext });
 
-    const zig_path = try std.fmt.allocPrint(allocator, "{s}.zig", .{source_path});
-
     // ------------------------------------------------------------
-    // 6. 写出 Zig 源码文件
-    // ------------------------------------------------------------
-    {
-        var zig_file = try cwd.createFile(io, zig_path, .{ .read = true });
-        defer zig_file.close(io);
-        try zig_file.writeStreamingAll(io, zig_code);
-    }
-
-    // 写出 javax runtime 文件（与生成的 .zig 同目录，供 @import 解析）
-    {
-        const runtime_dir = std.fs.path.dirname(zig_path) orelse ".";
-        const runtime_path = try std.fs.path.resolve(allocator, &[_][]const u8{ runtime_dir, runtime_file_name });
-        var rt_file = try cwd.createFile(io, runtime_path, .{ .read = true });
-        defer rt_file.close(io);
-        try rt_file.writeStreamingAll(io, javax_runtime_source);
-    }
-
-    // ------------------------------------------------------------
-    // 7. 编译
+    // 6. 在 temp 子目录中编译（Zig 0.16.0 在驱动器根目录下有 bug）
     // ------------------------------------------------------------
     try stdout.interface.print("Compiling {s} ...\n", .{source_path});
     try stdout.interface.flush();
 
+    const build_temp_dir = "javix_build_temp";
     {
-        var emit_arg_buf: [512]u8 = undefined;
-        const emit_arg = try std.fmt.bufPrint(&emit_arg_buf, "-femit-bin={s}", .{out_path});
+        // 创建 temp 子目录
+        cwd.createDir(io, build_temp_dir, .default_file) catch {};
+        defer cwd.deleteTree(io, build_temp_dir) catch {};
 
-        if (wasm) {
-            var child = try std.process.spawn(io, .{
-                .argv = &[_][]const u8{
-                    "zig", "build-exe", zig_path, emit_arg,
-                    "-target", "wasm32-wasi",
-                    "-O", "ReleaseSmall",
-                },
-            });
-            _ = try child.wait(io);
-        } else {
-            var child = try std.process.spawn(io, .{
-                .argv = &[_][]const u8{
-                    "zig", "build-exe", zig_path, emit_arg,
-                    "-O", "ReleaseSmall",
-                },
-            });
-            _ = try child.wait(io);
+        var temp_dir = try cwd.openDir(io, build_temp_dir, .{});
+        const temp_zig_name = "source.zig";
+        const temp_exe_name = if (wasm) "out.wasm" else if (@import("builtin").os.tag == .windows) "out.exe" else "out";
+
+        // 写入 zig 源码 + runtime 文件
+        {
+            var f = try temp_dir.createFile(io, temp_zig_name, .{ .read = true });
+            defer f.close(io);
+            try f.writeStreamingAll(io, zig_code);
+        }
+        {
+            var f = try temp_dir.createFile(io, runtime_file_name, .{ .read = true });
+            defer f.close(io);
+            try f.writeStreamingAll(io, javax_runtime_source);
+        }
+
+        // 编译
+        {
+            var emit_arg_buf: [512]u8 = undefined;
+            const emit_arg = try std.fmt.bufPrint(&emit_arg_buf, "-femit-bin={s}", .{temp_exe_name});
+
+            if (wasm) {
+                var child = try std.process.spawn(io, .{
+                    .argv = &[_][]const u8{
+                        "zig", "build-exe", temp_zig_name, emit_arg,
+                        "-target", "wasm32-wasi",
+                        "-O", "ReleaseSmall",
+                    },
+                    .cwd = .{ .path = build_temp_dir },
+                });
+                _ = try child.wait(io);
+            } else {
+                var child = try std.process.spawn(io, .{
+                    .argv = &[_][]const u8{
+                        "zig", "build-exe", temp_zig_name, emit_arg,
+                        "-O", "ReleaseSmall",
+                    },
+                    .cwd = .{ .path = build_temp_dir },
+                });
+                _ = try child.wait(io);
+            }
+        }
+
+        // 移动输出文件到目标位置
+        {
+            const temp_exe_path = try std.fmt.allocPrint(allocator, "{s}/{s}", .{ build_temp_dir, temp_exe_name });
+            // 如果目标已存在（比如上次编译的），先删掉
+            cwd.deleteFile(io, out_path) catch {};
+            try cwd.rename(temp_exe_path, cwd, out_path, io);
         }
     }
 

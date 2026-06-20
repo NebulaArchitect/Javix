@@ -1,15 +1,46 @@
-# Javix（精灵 Java）是一种新的编程语言
+# Javix — Java 语法的原生编译器
 
 **Java 怎么写，我就怎么写；Java 跑不快、跑不了的地方，我全能跑。**
 
+[![Version](https://img.shields.io/badge/version-v0.1.0--alpha-blue)]()
 [![License](https://img.shields.io/badge/license-GPLv3-green)]()
 [![Zig](https://img.shields.io/badge/Zig-0.16.0-orange)](https://ziglang.org/)
 
 ---
 
-Javix 是一门语法完全贴合 Java、底层用 Zig 重写、编译为原生 exe / Wasm的新一代编程语言。**零 JVM、零依赖、毫秒启动、KB级体积。**
+Javix 是一门语法贴合 Java、底层基于 Zig 编译为原生 exe / Wasm 的编程语言。
 
-> ⚠️ v0.1.0-alpha：功能完整可用，部分高级特性（异常处理、泛型）待完善。
+**零 JVM、零依赖、毫秒启动、KB 级体积。**
+
+> ⚠️ v0.1.0-alpha：核心功能可用，部分高级特性（异常处理、泛型）待完善。
+
+---
+
+## 安装
+
+### 方式一：下载二进制（推荐）
+
+从 [Releases](../../releases) 下载 `javix.exe`，放到任意目录，**确保该目录在系统 PATH 中**。
+
+### 前置条件：安装 Zig 0.16.0
+
+Javix 编译时需要调用 `zig build-exe`。请从 [ziglang.org/download](https://ziglang.org/download/) 下载 **Zig 0.16.0**，解压后将 `zig.exe` 所在目录加入 PATH。
+
+```bash
+# 验证
+zig version
+# → 0.16.0
+```
+
+### 验证安装
+
+```bash
+javix
+# → 进入 REPL 交互模式
+
+javix --help
+# → 显示帮助
+```
 
 ---
 
@@ -17,25 +48,41 @@ Javix 是一门语法完全贴合 Java、底层用 Zig 重写、编译为原生 
 
 ### 方式一：文件编译（推荐）
 
-```bash
-# hello_javix.jx
+创建 `hello.jx`：
+```java
 fn main() -> void {
     print("Hello, Javix!");
 }
 ```
 
 ```bash
-javix build hello_javix.jx
-./hello_javix.exe
+javix build hello.jx
+./hello.exe            # Windows
+# ./hello              # Linux
 ```
 
 ### 方式二：REPL 交互
 
 ```bash
 javix repl
+```
+
+```java
 >>> int x = 10;
 >>> print(x);
 10
+>>> String name = "Javix";
+>>> print(name);
+Javix
+>>> exit
+Goodbye.
+```
+
+### 编译为 Wasm
+
+```bash
+javix build hello.jx --wasm
+# → hello.wasm
 ```
 
 ---
@@ -64,7 +111,7 @@ do { run(); } while (alive);
 
 // if/else + switch
 if (score > 90) { print("A"); }
-switch (n) { case 1,2: break; default: break; }
+switch (n) { case 1, 2: break; default: break; }
 ```
 
 ### 函数与递归
@@ -93,10 +140,11 @@ Dog d = new Dog("Rex", "Husky");
 print(d.speak());  // Woof!
 ```
 
-### 37 个内置函数
+### 内置函数（37 个）
 
 | 分类 | 函数 |
 |------|------|
+| 输出 | `print`, `println` |
 | String | `strlen`, `strsub`, `strequal`, `strtrim`, `strcontains` |
 | Math | `mathAbs`, `mathMin`, `mathMax`, `mathPow`, `mathSqrt` |
 | 转换 | `intToString`, `doubleToString` |
@@ -105,10 +153,22 @@ print(d.speak());  // Woof!
 | JSON | `jsonGet` |
 | Character | `charIsDigit`, `charIsLetter`, `charToUpper`, `charToLower` |
 | 日期时间 | `currentTimeMillis` |
-| 文件IO | `readFile`, `writeFile`, `fileAppend` |
+| 文件 IO | `readFile`, `writeFile`, `fileAppend` |
 | HashMap | `mapPut`, `mapGet`, `mapContainsKey` |
 | ArrayList | `listCreate`, `listAdd`, `listGet`, `listSize` |
 | 多线程 | `threadSleep` |
+
+---
+
+## 从源码构建
+
+```bash
+# 需要 Zig 0.16.0
+git clone <仓库地址>
+cd javix
+zig build
+./zig-out/bin/javix.exe build hello_javix.jx
+```
 
 ---
 
@@ -117,28 +177,18 @@ print(d.speak());  // Woof!
 ```
 Javix 源码 (.jx)
     → 词法分析 (lexer)
-    → 语法分析 (parser) 
+    → 语法分析 (parser)
     → AST (ast)
     → 代码生成 (codegen → Zig 源码)
     → zig build-exe → 原生 exe / Wasm
 ```
 
-- **编译器语言**: Zig 0.16.0
-- **输出**: 原生 exe (Windows) / wasm32-wasi
-- **运行时**: 零 JVM，直接调用 kernel32 (Windows)
-- **体积**: 空项目 ~36KB (Wasm)
-
----
-
-## 从源码构建
-
-```bash
-# 需要 Zig 0.16.0
-git clone https://github.com/NebulaArchitect/javix.git
-cd javix
-zig build
-./zig-out/bin/javix.exe build hello_javix.jx
-```
+| 项 | 说明 |
+|----|------|
+| 编译器语言 | Zig 0.16.0 |
+| 输出 | 原生 exe (Windows) / wasm32-wasi |
+| 运行时 | 零 JVM，直接调用 kernel32 |
+| 体积 | 空项目 ~36KB (Wasm) |
 
 ---
 
@@ -146,7 +196,7 @@ zig build
 
 - 函数参数格式为 `name: type`（非 Java 的 `type name`）
 - 异常处理 try/catch 未实现
-- 泛型/注解/Lambda 未实现
+- 泛型 / 注解 / Lambda 未实现
 - 文件 IO 仅 Windows
 - 字符串拼接仅限顶层作用域
 - REPL 为实验性功能

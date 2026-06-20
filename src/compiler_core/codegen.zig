@@ -32,7 +32,7 @@ pub const CodeGen = struct {
         // 生成 Zig 代码头部 + print 辅助函数 + javax runtime
                 try self.output.appendSlice(self.allocator,
             \\const std = @import("std");
-            \\const javax = @import("src/runtime/javax_runtime.zig");
+            \\const javax = @import("javax_runtime.zig");
             \\
             \\fn printInt(x: i64) void {
             \\    std.debug.print("{d}\n", .{x});

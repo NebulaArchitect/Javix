@@ -4,6 +4,11 @@
 
 const std = @import("std");
 
+// 将 javax runtime 源码嵌入到二进制中，运行时按需写出，
+// 避免依赖 CWD 路径解析 @import
+const javax_runtime_source = @embedFile("../runtime/javax_runtime.zig");
+const runtime_file_name = "javax_runtime.zig";
+
 pub const Executor = struct {
     io: std.Io,
     allocator: std.mem.Allocator,
@@ -29,7 +34,7 @@ pub const Executor = struct {
             try stdout_writer.interface.flush();
         }
 
-        // 创建临时目录
+        // 当前工作目录（temp 文件写入这里）
         const cwd = std.Io.Dir.cwd();
         const temp_zig_path = "javix_repl_temp.zig";
         const temp_exe_path = "javix_repl_temp.exe";
@@ -38,6 +43,11 @@ pub const Executor = struct {
         var temp_file = try cwd.createFile(self.io, temp_zig_path, .{ .read = true });
         defer temp_file.close(self.io);
         try temp_file.writeStreamingAll(self.io, zig_code);
+
+        // 写入 javax runtime 文件（与 temp zig 文件同目录，供 @import 解析）
+        var rt_file = try cwd.createFile(self.io, runtime_file_name, .{ .read = true });
+        defer rt_file.close(self.io);
+        try rt_file.writeStreamingAll(self.io, javax_runtime_source);
 
         // 编译 Zig 代码
         try self.compileZigFile(temp_zig_path, temp_exe_path);
@@ -48,6 +58,7 @@ pub const Executor = struct {
         // 清理临时文件
         cwd.deleteFile(self.io, temp_zig_path) catch {};
         cwd.deleteFile(self.io, temp_exe_path) catch {};
+        cwd.deleteFile(self.io, runtime_file_name) catch {};
     }
 
     /// 编译 Zig 文件为可执行文件

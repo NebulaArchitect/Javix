@@ -10,6 +10,11 @@ const Node = @import("compiler_core/ast.zig").Node;
 const SymbolTable = @import("compiler_core/ast.zig").SymbolTable;
 const CodeGen = @import("compiler_core/codegen.zig").CodeGen;
 
+// 将 javax runtime 源码嵌入到二进制中，运行时按需写出，
+// 避免依赖 CWD 路径解析 @import
+const javax_runtime_source = @embedFile("runtime/javax_runtime.zig");
+const runtime_file_name = "javax_runtime.zig";
+
 pub fn build(io: std.Io, parent_allocator: std.mem.Allocator, source_path: []const u8, wasm: bool) !void {
     // Arena: 整个编译流程的内存统一管理，函数结束自动全部释放
     var arena = std.heap.ArenaAllocator.init(parent_allocator);
@@ -191,6 +196,15 @@ pub fn build(io: std.Io, parent_allocator: std.mem.Allocator, source_path: []con
         var zig_file = try cwd.createFile(io, zig_path, .{ .read = true });
         defer zig_file.close(io);
         try zig_file.writeStreamingAll(io, zig_code);
+    }
+
+    // 写出 javax runtime 文件（与生成的 .zig 同目录，供 @import 解析）
+    {
+        const runtime_dir = std.fs.path.dirname(zig_path) orelse ".";
+        const runtime_path = try std.fs.path.resolve(allocator, &[_][]const u8{ runtime_dir, runtime_file_name });
+        var rt_file = try cwd.createFile(io, runtime_path, .{ .read = true });
+        defer rt_file.close(io);
+        try rt_file.writeStreamingAll(io, javax_runtime_source);
     }
 
     // ------------------------------------------------------------

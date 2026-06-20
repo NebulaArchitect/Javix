@@ -164,7 +164,7 @@ print(d.speak());  // Woof!
 
 ```bash
 # 需要 Zig 0.16.0
-git clone <仓库地址>
+git clone https://github.com/NebulaArchitect/javix.git
 cd javix
 zig build
 ./zig-out/bin/javix.exe build hello_javix.jx
